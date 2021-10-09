@@ -2,6 +2,27 @@
 const gas: any = global;
 import { diffLines } from 'diff';
 
+/* Sample: [
+  {
+    "name": "買い物リスト",
+    "latestCell": "B2",
+    "currentCell": "B3",
+    "url": "https://amzn.to/****"
+  },
+  {
+    "name": "やることリスト",
+    "latestCell": "B4",
+    "currentCell": "B5",
+    "url": "https://amzn.to/****"
+  }
+] */
+type ListConfig = {
+  name: string,
+  latestCell: string,
+  currentCell: string,
+  url: string
+};
+
 gas._main = () => {
   const SPREAD_SHEET_ID = getProperty('SPREAD_SHEET_ID');
   const WEBHOOK_URL = getProperty('WEBHOOK_URL');
@@ -10,41 +31,49 @@ gas._main = () => {
   const mainSheet = spreadSheet.getSheets()[0];
   if (!mainSheet) throw new Error('シートが存在しません');
 
-  const values = mainSheet.getRange(2, 2, 2, 1).getValues();
-  const alexaValue: string | undefined = values[0][0];
-  const discordValue: string | undefined = values[1][0];
+  const listConfigs: ListConfig[] = JSON.parse(mainSheet.getRange('B1').getValue());
 
-  if (!alexaValue || alexaValue === discordValue) return;
+  for (const listConfig of listConfigs) {
+    const latestRange = mainSheet.getRange(listConfig.latestCell);
+    const currentRange = mainSheet.getRange(listConfig.currentCell);
+    const latestValue: string | undefined = latestRange.getValue();
+    const currentValue: string | undefined = currentRange.getValue();
 
-  let message = '買い物リストが更新されました。\n';
-  const oldText = getDiffText(discordValue);
-  const newText = getDiffText(alexaValue);
-  const changes = diffLines(oldText, newText);
-
-  message += '```diff\n';
-  for (const block of changes) {
-    const prefix = block.added ? '+' :
-      block.removed ? '-' : ' ';
-    for (const line of block.value.trim().split(/\r?\n/)) {
-      message += `${prefix} ${line}\n`;
+    if (latestValue === currentValue) {
+      console.log(`${listConfig.name}: 更新なし`);
+      continue;
     }
+
+    let message = `${listConfig.name}が更新されました。\n`;
+    const oldText = getDiffText(currentValue);
+    const newText = getDiffText(latestValue);
+    const changes = diffLines(oldText, newText);
+
+    message += '```diff\n';
+    for (const block of changes) {
+      const prefix = block.added ? '+' :
+        block.removed ? '-' : ' ';
+      for (const line of block.value.trim().split(/\r?\n/)) {
+        message += `${prefix} ${line}\n`;
+      }
+    }
+    message += '```';
+
+    UrlFetchApp.fetch(WEBHOOK_URL, {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify({
+        content: message,
+        embeds: [{
+          title: '編集',
+          url: listConfig.url
+        }]
+      }),
+      muteHttpExceptions: true
+    });
+
+    currentRange.setValue(latestValue);
   }
-  message += '```';
-
-  UrlFetchApp.fetch(WEBHOOK_URL, {
-    method: 'post',
-    contentType: 'application/json',
-    payload: JSON.stringify({
-      content: message,
-      embeds: [{
-        title: '編集',
-        url: 'https://amzn.to/2WNkAeh'
-      }]
-    }),
-    muteHttpExceptions: true
-  });
-
-  mainSheet.getRange(3, 2).setValue(alexaValue);
 };
 
 function getDiffText(text?: string): string {

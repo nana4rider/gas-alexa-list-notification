@@ -1,10 +1,12 @@
-# gas-shopping-list-notification
-Alexa買い物リスト通知
+# gas-alexa-list-notification
+Alexaリスト更新通知
 
-スプレッドシートに記載されたAlexa買い物リストの内容を読み取り、  
+スプレッドシートに記載されたAlexaリストの内容を読み取り、  
 内容に変更があった場合Discordに通知する。
 
 ![](images/discord.png)
+
+![](images/sheet.png)
 
 ```mermaid
 sequenceDiagram
