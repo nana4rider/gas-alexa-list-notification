@@ -7,25 +7,27 @@ import { diffLines } from 'diff';
     "name": "買い物リスト",
     "latestCell": "B2",
     "currentCell": "B3",
-    "url": "https://amzn.to/****"
+    "webhookUrl": "https://discord.com/api/webhooks/****",
+    "listUrl": "https://amzn.to/****"
   },
   {
     "name": "やることリスト",
     "latestCell": "B4",
     "currentCell": "B5",
-    "url": "https://amzn.to/****"
+    "webhookUrl": "https://discord.com/api/webhooks/****",
+    "listUrl": "https://amzn.to/****"
   }
 ] */
 type ListConfig = {
   name: string,
   latestCell: string,
   currentCell: string,
-  url: string
+  webhookUrl: string,
+  listUrl: string
 };
 
 gas._main = () => {
   const SPREAD_SHEET_ID = getProperty('SPREAD_SHEET_ID');
-  const WEBHOOK_URL = getProperty('WEBHOOK_URL');
 
   const spreadSheet = SpreadsheetApp.openById(SPREAD_SHEET_ID);
   const mainSheet = spreadSheet.getSheets()[0];
@@ -59,14 +61,14 @@ gas._main = () => {
     }
     message += '```';
 
-    UrlFetchApp.fetch(WEBHOOK_URL, {
+    UrlFetchApp.fetch(listConfig.webhookUrl, {
       method: 'post',
       contentType: 'application/json',
       payload: JSON.stringify({
         content: message,
         embeds: [{
           title: '編集',
-          url: listConfig.url
+          url: listConfig.listUrl
         }]
       }),
       muteHttpExceptions: true
